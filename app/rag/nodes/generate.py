@@ -18,6 +18,10 @@ def generate_node(state: GraphState) -> dict:
 
     chain = ANSWER_GENERATION_PROMPT | get_llm()
     result = chain.invoke(
-        {"context": context, "question": question, "regeneration_notice": regeneration_notice}
+        {
+            "context": context,
+            "question": question,
+            "regeneration_notice": regeneration_notice,
+        }
     )
     return {"answer": (result.content or "").strip()}

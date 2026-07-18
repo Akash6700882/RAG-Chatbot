@@ -40,7 +40,10 @@ def chat(
     save_message(db, current_user.id, session_id, "assistant", result["answer"])
 
     sources = sorted(
-        {doc.metadata.get("filename", "unknown") for doc in result.get("retrieved_docs", [])}
+        {
+            doc.metadata.get("filename", "unknown")
+            for doc in result.get("retrieved_docs", [])
+        }
     )
     logger.info(
         "Chat answered for user=%s session=%s grounded=%s retries=%s",

@@ -18,8 +18,14 @@ logger = get_logger(__name__)
 OPENAPI_TAGS = [
     {"name": "system", "description": "Health and liveness checks."},
     {"name": "auth", "description": "User registration and JWT login."},
-    {"name": "documents", "description": "Multi-format document ingestion and management (PDF/DOCX/TXT/MD)."},
-    {"name": "chat", "description": "LangGraph-orchestrated RAG chat and conversation history."},
+    {
+        "name": "documents",
+        "description": "Multi-format document ingestion and management (PDF/DOCX/TXT/MD).",
+    },
+    {
+        "name": "chat",
+        "description": "LangGraph-orchestrated RAG chat and conversation history.",
+    },
 ]
 
 
@@ -27,7 +33,11 @@ OPENAPI_TAGS = [
 async def lifespan(app: FastAPI):
     configure_logging()
     init_db()
-    logger.info("Application startup complete (env=%s, vector_db=%s)", settings.app_env, settings.vector_db)
+    logger.info(
+        "Application startup complete (env=%s, vector_db=%s)",
+        settings.app_env,
+        settings.vector_db,
+    )
     yield
     logger.info("Application shutdown")
 

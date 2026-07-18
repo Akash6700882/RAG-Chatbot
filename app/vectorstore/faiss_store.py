@@ -32,7 +32,9 @@ class FaissVectorStore:
     def _load(self) -> None:
         if self._index_dir.exists():
             self._store = FAISS.load_local(
-                str(self._index_dir), self._embeddings, allow_dangerous_deserialization=True
+                str(self._index_dir),
+                self._embeddings,
+                allow_dangerous_deserialization=True,
             )
         if self._manifest_path.exists():
             self._manifest = json.loads(self._manifest_path.read_text())

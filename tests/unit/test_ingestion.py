@@ -9,7 +9,9 @@ from app.ingestion.splitter import split_documents
 
 def test_load_txt_document(tmp_path):
     file_path = tmp_path / "notes.txt"
-    file_path.write_text("Hello world. This is a plain text test file.", encoding="utf-8")
+    file_path.write_text(
+        "Hello world. This is a plain text test file.", encoding="utf-8"
+    )
 
     docs = load_document(str(file_path))
 

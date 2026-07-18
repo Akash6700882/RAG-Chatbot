@@ -51,7 +51,9 @@ def client(monkeypatch, tmp_path) -> Generator[TestClient, None, None]:
 
     engine = create_engine(test_db_url, connect_args={"check_same_thread": False})
     db_session_module.engine = engine
-    db_session_module.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db_session_module.SessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine
+    )
 
     from app.db.session import Base
 
@@ -79,7 +81,13 @@ def client(monkeypatch, tmp_path) -> Generator[TestClient, None, None]:
 
 @pytest.fixture()
 def auth_headers(client: TestClient) -> dict[str, str]:
-    client.post("/api/v1/auth/register", json={"email": "test@example.com", "password": "supersecret1"})
-    response = client.post("/api/v1/auth/login", json={"email": "test@example.com", "password": "supersecret1"})
+    client.post(
+        "/api/v1/auth/register",
+        json={"email": "test@example.com", "password": "supersecret1"},
+    )
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "test@example.com", "password": "supersecret1"},
+    )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

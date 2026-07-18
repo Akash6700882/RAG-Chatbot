@@ -24,7 +24,9 @@ def mock_rag_llms(monkeypatch):
     import app.rag.nodes.validate_context as validate_module
 
     fakes = {
-        "rewrite": FakeListChatModel(responses=["What is the PTO carryover policy?"] * 10),
+        "rewrite": FakeListChatModel(
+            responses=["What is the PTO carryover policy?"] * 10
+        ),
         "validate": FakeListChatModel(responses=["SUFFICIENT"] * 10),
         "generate": FakeListChatModel(
             responses=["Employees can carry over up to 5 PTO days (handbook.txt)."] * 10
@@ -42,7 +44,13 @@ def _upload_handbook(client: TestClient, headers: dict[str, str]):
     return client.post(
         "/api/v1/upload",
         headers=headers,
-        files={"file": ("handbook.txt", io.BytesIO(HANDBOOK_TEXT.encode("utf-8")), "text/plain")},
+        files={
+            "file": (
+                "handbook.txt",
+                io.BytesIO(HANDBOOK_TEXT.encode("utf-8")),
+                "text/plain",
+            )
+        },
     )
 
 
@@ -51,10 +59,14 @@ def test_chat_requires_auth(client: TestClient):
     assert response.status_code == 401
 
 
-def test_chat_with_no_documents_returns_safe_fallback(client: TestClient, auth_headers: dict[str, str]):
+def test_chat_with_no_documents_returns_safe_fallback(
+    client: TestClient, auth_headers: dict[str, str]
+):
     """No documents uploaded -> empty retrieval -> fallback node, with zero LLM calls."""
     response = client.post(
-        "/api/v1/chat", headers=auth_headers, json={"message": "What is the PTO policy?"}
+        "/api/v1/chat",
+        headers=auth_headers,
+        json={"message": "What is the PTO policy?"},
     )
     assert response.status_code == 200
     body = response.json()
@@ -68,7 +80,9 @@ def test_chat_after_upload_returns_grounded_answer(
     _upload_handbook(client, auth_headers)
 
     response = client.post(
-        "/api/v1/chat", headers=auth_headers, json={"message": "How many PTO days carry over?"}
+        "/api/v1/chat",
+        headers=auth_headers,
+        json={"message": "How many PTO days carry over?"},
     )
 
     assert response.status_code == 200
@@ -78,11 +92,15 @@ def test_chat_after_upload_returns_grounded_answer(
     assert body["session_id"]
 
 
-def test_chat_maintains_session_history(client: TestClient, auth_headers: dict[str, str], mock_rag_llms):
+def test_chat_maintains_session_history(
+    client: TestClient, auth_headers: dict[str, str], mock_rag_llms
+):
     _upload_handbook(client, auth_headers)
 
     first = client.post(
-        "/api/v1/chat", headers=auth_headers, json={"message": "How many PTO days carry over?"}
+        "/api/v1/chat",
+        headers=auth_headers,
+        json={"message": "How many PTO days carry over?"},
     )
     session_id = first.json()["session_id"]
 
@@ -109,8 +127,14 @@ def test_history_requires_auth(client: TestClient):
 def test_history_is_scoped_to_owner(client: TestClient, auth_headers: dict[str, str]):
     client.post("/api/v1/chat", headers=auth_headers, json={"message": "hello"})
 
-    client.post("/api/v1/auth/register", json={"email": "other@example.com", "password": "supersecret1"})
-    login = client.post("/api/v1/auth/login", json={"email": "other@example.com", "password": "supersecret1"})
+    client.post(
+        "/api/v1/auth/register",
+        json={"email": "other@example.com", "password": "supersecret1"},
+    )
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "other@example.com", "password": "supersecret1"},
+    )
     other_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
     response = client.get("/api/v1/history", headers=other_headers)

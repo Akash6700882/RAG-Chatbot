@@ -38,13 +38,15 @@ def test_login_wrong_password_unauthorized(client: TestClient):
     client.post("/api/v1/auth/register", json=payload)
 
     response = client.post(
-        "/api/v1/auth/login", json={"email": "wrongpass@example.com", "password": "nope"}
+        "/api/v1/auth/login",
+        json={"email": "wrongpass@example.com", "password": "nope"},
     )
     assert response.status_code == 401
 
 
 def test_login_unknown_email_unauthorized(client: TestClient):
     response = client.post(
-        "/api/v1/auth/login", json={"email": "ghost@example.com", "password": "whatever1"}
+        "/api/v1/auth/login",
+        json={"email": "ghost@example.com", "password": "whatever1"},
     )
     assert response.status_code == 401

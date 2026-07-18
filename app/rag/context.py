@@ -7,5 +7,6 @@ def format_context(docs: list[LCDocument]) -> str:
     if not docs:
         return "(no documents retrieved)"
     return "\n\n".join(
-        f"[Source: {doc.metadata.get('filename', 'unknown')}]\n{doc.page_content}" for doc in docs
+        f"[Source: {doc.metadata.get('filename', 'unknown')}]\n{doc.page_content}"
+        for doc in docs
     )

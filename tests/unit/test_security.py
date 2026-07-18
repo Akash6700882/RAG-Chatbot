@@ -3,7 +3,12 @@
 import pytest
 
 from app.core.exceptions import UnauthorizedError
-from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    verify_password,
+)
 
 
 def test_hash_password_is_not_plaintext():
