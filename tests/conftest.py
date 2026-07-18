@@ -1,11 +1,11 @@
-"""Shared pytest fixtures: isolated test DB and FastAPI test client."""
+"""Shared pytest fixtures: isolated test DB, fake embeddings, and FastAPI test client."""
 
 import os
-import tempfile
 from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
+from langchain_core.embeddings import Embeddings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -14,15 +14,29 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 
 
-@pytest.fixture()
-def db_path(tmp_path) -> Generator[str, None, None]:
-    path = tmp_path / "test.db"
-    yield str(path)
+class FakeEmbeddings(Embeddings):
+    """Deterministic bag-of-words embedding stand-in, avoiding real model downloads in tests."""
+
+    def __init__(self, dim: int = 64) -> None:
+        self.dim = dim
+
+    def _embed(self, text: str) -> list[float]:
+        vector = [0.0] * self.dim
+        for word in text.lower().split():
+            vector[hash(word) % self.dim] += 1.0
+        norm = sum(v * v for v in vector) ** 0.5 or 1.0
+        return [v / norm for v in vector]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
 
 
 @pytest.fixture()
 def client(monkeypatch, tmp_path) -> Generator[TestClient, None, None]:
-    """A TestClient wired to a fresh, isolated SQLite database per test."""
+    """A TestClient wired to an isolated SQLite DB, vector store dir, and fake embeddings."""
     db_file = tmp_path / "test.db"
     test_db_url = f"sqlite:///{db_file}"
     monkeypatch.setenv("DATABASE_URL", test_db_url)
@@ -43,6 +57,15 @@ def client(monkeypatch, tmp_path) -> Generator[TestClient, None, None]:
 
     Base.metadata.create_all(bind=engine)
 
+    fake_embeddings = FakeEmbeddings()
+    import app.vectorstore.chroma_store as chroma_store_module
+    import app.vectorstore.factory as factory_module
+    import app.vectorstore.faiss_store as faiss_store_module
+
+    monkeypatch.setattr(chroma_store_module, "get_embeddings", lambda: fake_embeddings)
+    monkeypatch.setattr(faiss_store_module, "get_embeddings", lambda: fake_embeddings)
+    factory_module._store_cache.clear()
+
     from app.main import create_app
 
     test_app = create_app()
@@ -50,6 +73,7 @@ def client(monkeypatch, tmp_path) -> Generator[TestClient, None, None]:
     with TestClient(test_app) as test_client:
         yield test_client
 
+    factory_module._store_cache.clear()
     get_settings.cache_clear()
 
 
