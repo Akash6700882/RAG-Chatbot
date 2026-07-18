@@ -1,0 +1,40 @@
+services:
+  api:
+    build: .
+    container_name: rag-chatbot-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - app-data:/app/data
+    # No host port published here on purpose: nginx is the single public
+    # entrypoint (proxies to api:8000 over the internal compose network).
+    # Uncomment below only for local debugging direct access to the API:
+    # ports:
+    #   - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: rag-chatbot-nginx
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/rag-chatbot.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+
+volumes:
+  app-data:
+  certbot-etc:
+  certbot-www:
