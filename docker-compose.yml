@@ -34,6 +34,16 @@ services:
       - certbot-etc:/etc/letsencrypt
       - certbot-www:/var/www/certbot
 
+  # One-shot cert issuance/renewal. Not started by `docker compose up`;
+  # invoked explicitly via deploy/nginx/init-letsencrypt.sh.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: rag-chatbot-certbot
+    profiles: ["certbot"]
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+
 volumes:
   app-data:
   certbot-etc:
