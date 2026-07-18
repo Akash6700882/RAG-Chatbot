@@ -1,46 +1,46 @@
 # --- Web framework ---
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-python-multipart==0.0.20
-pydantic==2.10.4
-pydantic-settings==2.7.1
+fastapi==0.139.2
+uvicorn[standard]==0.51.0
+python-multipart==0.0.32
+pydantic==2.13.4
+pydantic-settings==2.14.2
 
 # --- Auth / security ---
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1  # passlib 1.7.4 is incompatible with bcrypt>=4.1's API changes
 
 # --- Database ---
-sqlalchemy==2.0.36
+sqlalchemy==2.0.51
 
 # --- LLM / RAG stack ---
-langchain==0.3.14
-langchain-core==0.3.29
-langchain-community==0.3.14
-langchain-anthropic==0.3.3
-langchain-huggingface==0.1.2
-langgraph==0.2.62
-anthropic==0.42.0
+langchain-core==1.4.9
+langchain-community==0.4.2
+langchain-text-splitters==1.1.2
+langchain-anthropic==1.4.8
+langchain-huggingface==1.2.2
+langgraph==1.2.9
+anthropic==0.117.0
 
 # --- Embeddings ---
-sentence-transformers==3.3.1
+sentence-transformers==5.6.0
 
 # --- Vector stores ---
-chromadb==0.5.23
+chromadb==1.5.9
 langchain-chroma==1.1.0
-faiss-cpu==1.9.0.post1
+faiss-cpu==1.14.3
 
 # --- Document loaders ---
-pypdf==5.1.0
-python-docx==1.1.2
-docx2txt==0.8
+pypdf==6.14.2
+docx2txt==0.9
 
 # --- Utilities ---
-python-dotenv==1.0.1
-tenacity==9.0.0
+python-dotenv==1.2.2
+tenacity==9.1.4
 
 # --- Testing / dev tooling ---
-pytest==8.3.4
-pytest-asyncio==0.25.1
+pytest==9.1.1
+pytest-asyncio==1.4.0
 httpx==0.28.1
-ruff==0.8.6
+ruff==0.15.22
+email-validator==2.3.0
