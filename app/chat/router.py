@@ -39,11 +39,18 @@ def chat(
     save_message(db, current_user.id, session_id, "user", payload.message)
     save_message(db, current_user.id, session_id, "assistant", result["answer"])
 
-    sources = sorted(
-        {
-            doc.metadata.get("filename", "unknown")
-            for doc in result.get("retrieved_docs", [])
-        }
+    # Only cite sources when the answer actually came from generated, grounded
+    # content — not when the fallback path was used (context was insufficient,
+    # or the answer was rejected as ungrounded after retries).
+    sources = (
+        []
+        if result.get("used_fallback")
+        else sorted(
+            {
+                doc.metadata.get("filename", "unknown")
+                for doc in result.get("retrieved_docs", [])
+            }
+        )
     )
     logger.info(
         "Chat answered for user=%s session=%s grounded=%s retries=%s",

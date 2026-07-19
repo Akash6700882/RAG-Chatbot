@@ -61,7 +61,11 @@ def test_validate_context_calls_llm_when_docs_present(monkeypatch):
 
 def test_fallback_node_returns_canned_answer():
     result = fallback_node({})
-    assert result == {"answer": FALLBACK_ANSWER, "is_grounded": True}
+    assert result == {
+        "answer": FALLBACK_ANSWER,
+        "is_grounded": True,
+        "used_fallback": True,
+    }
 
 
 def test_route_after_validation():
@@ -156,4 +160,39 @@ def test_graph_falls_back_when_context_insufficient(monkeypatch):
     )
 
     assert result["answer"] == FALLBACK_ANSWER
+    assert result["used_fallback"] is True
+
+
+def test_graph_falls_back_even_when_docs_were_retrieved(monkeypatch):
+    """Docs came back from retrieval but were judged irrelevant — the fallback
+    path must still fire, and used_fallback must be set so callers know not
+    to cite retrieved_docs as sources for the canned answer."""
+    import app.rag.graph as graph_module
+    import app.rag.nodes.validate_context as validate_module
+
+    docs = [
+        LCDocument(page_content="Unrelated content.", metadata={"filename": "other.md"})
+    ]
+    monkeypatch.setattr(
+        graph_module, "retrieve_node", lambda state: {"retrieved_docs": docs}
+    )
+    monkeypatch.setattr(
+        validate_module,
+        "get_llm",
+        lambda: FakeListChatModel(responses=["INSUFFICIENT"]),
+    )
+
+    graph = build_graph()
+    result = graph.invoke(
+        {
+            "question": "Unrelated question?",
+            "owner_id": "user-1",
+            "chat_history": [],
+            "retry_count": 0,
+        }
+    )
+
+    assert result["answer"] == FALLBACK_ANSWER
+    assert result["used_fallback"] is True
+    assert result["retrieved_docs"] == docs
     assert result["context_sufficient"] is False

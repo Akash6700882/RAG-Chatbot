@@ -18,3 +18,4 @@ class GraphState(TypedDict, total=False):
     is_grounded: bool
     hallucination_reason: str
     retry_count: int
+    used_fallback: bool

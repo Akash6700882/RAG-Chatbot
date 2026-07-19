@@ -12,8 +12,13 @@ class Settings(BaseSettings):
     )
 
     # LLM provider
+    llm_provider: Literal["anthropic", "gemini", "groq"] = "anthropic"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-haiku-4-5"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.1-8b-instant"
 
     # Embeddings
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"

@@ -11,4 +11,4 @@ from app.rag.state import GraphState
 
 
 def fallback_node(state: GraphState) -> dict:
-    return {"answer": FALLBACK_ANSWER, "is_grounded": True}
+    return {"answer": FALLBACK_ANSWER, "is_grounded": True, "used_fallback": True}

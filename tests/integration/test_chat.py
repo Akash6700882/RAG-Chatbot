@@ -92,6 +92,32 @@ def test_chat_after_upload_returns_grounded_answer(
     assert body["session_id"]
 
 
+def test_chat_omits_sources_when_context_rejected_as_insufficient(
+    client: TestClient, auth_headers: dict[str, str], monkeypatch
+):
+    """A document is retrieved (upload succeeded) but judged irrelevant to the
+    question — the fallback answer must not cite it as a source."""
+    import app.rag.nodes.validate_context as validate_module
+
+    monkeypatch.setattr(
+        validate_module,
+        "get_llm",
+        lambda: FakeListChatModel(responses=["INSUFFICIENT"] * 10),
+    )
+    _upload_handbook(client, auth_headers)
+
+    response = client.post(
+        "/api/v1/chat",
+        headers=auth_headers,
+        json={"message": "What is the capital of France?"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "don't have enough information" in body["answer"]
+    assert body["sources"] == []
+
+
 def test_chat_maintains_session_history(
     client: TestClient, auth_headers: dict[str, str], mock_rag_llms
 ):
