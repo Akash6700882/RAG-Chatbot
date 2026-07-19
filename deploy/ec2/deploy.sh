@@ -22,8 +22,11 @@ echo "==> Pruning old images"
 docker image prune -f
 
 echo "==> Waiting for health check"
+# Checked through nginx on :80, not the api container directly — the api
+# service intentionally has no host port published (nginx is the sole
+# public entrypoint; see docker-compose.yml).
 for _ in $(seq 1 20); do
-    if curl -fs http://localhost:8000/health > /dev/null; then
+    if curl -fs http://localhost/health > /dev/null; then
         echo "Service healthy."
         exit 0
     fi
