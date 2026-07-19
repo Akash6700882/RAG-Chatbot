@@ -16,7 +16,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_sha_tag: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      image_sha_tag: ${{ env.REGISTRY }}/${{ steps.image_name.outputs.lowercase }}:${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,11 +28,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Docker/GHCR require lowercase image references; github.repository
+      # preserves the repo's actual case (e.g. "Akash6700882/RAG-Chatbot"),
+      # which `docker pull` rejects outright. Normalize once and reuse
+      # everywhere an image reference is built, so the tag used to build/push
+      # is guaranteed to match the tag deploy.sh later tries to pull.
+      - name: Compute lowercase image name
+        id: image_name
+        run: echo "lowercase=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image_name.outputs.lowercase }}
           tags: |
             type=sha,prefix=,format=long
             type=raw,value=latest,enable={{is_default_branch}}
