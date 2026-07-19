@@ -1,10 +1,12 @@
 """FastAPI application factory and entrypoint."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import api_router
 from app.config import get_settings
@@ -69,11 +71,14 @@ def create_app() -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def root() -> RedirectResponse:
-        return RedirectResponse(url="/docs")
+        return RedirectResponse(url="/ui")
 
     @app.get("/health", tags=["system"])
     def health_check() -> dict[str, str]:
         return {"status": "ok"}
+
+    static_dir = Path(__file__).parent / "static"
+    app.mount("/ui", StaticFiles(directory=static_dir, html=True), name="ui")
 
     return app
 

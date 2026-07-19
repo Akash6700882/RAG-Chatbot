@@ -20,9 +20,10 @@ A production-grade, enterprise-style **Retrieval-Augmented Generation (RAG)** ch
 - **Conversation memory** — per-session history persisted in the database and fed into the rewrite node.
 - **JWT authentication** — bcrypt password hashing, scoped per-user documents and chat history (no cross-tenant data leakage).
 - **REST API** with auto-generated OpenAPI/Swagger docs at `/docs`.
+- **Lightweight demo frontend** at `/ui` — a single static page (vanilla HTML/JS, no build step) for register/login/upload/chat, useful for demos without needing a Swagger form or curl.
 - **Dockerized**, deployed behind **NGINX** with a Let's Encrypt/HTTPS bootstrap script.
 - **CI/CD** via GitHub Actions: lint + test + Docker build on every push, image publish to GHCR and guarded SSH deploy to EC2 on `main`.
-- **Unit + integration test suite** (42 tests) with all LLM/embedding calls mocked — zero network calls or API cost in CI.
+- **Unit + integration test suite** (45 tests) with all LLM/embedding calls mocked — zero network calls or API cost in CI.
 
 ---
 
@@ -137,12 +138,12 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-Visit **http://localhost:8000/docs** for interactive Swagger UI.
+Visit **http://localhost:8000/** for the demo frontend, or **http://localhost:8000/docs** for interactive Swagger UI.
 
 ### Running tests
 
 ```bash
-pytest -q          # 42 tests, all LLM/embedding calls mocked — no API key needed
+pytest -q          # 45 tests, all LLM/embedding calls mocked — no API key needed
 ruff check app tests
 ```
 
@@ -150,8 +151,10 @@ ruff check app tests
 
 | Variable | Default | Description |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | — | Anthropic API key (required for real chat) |
-| `ANTHROPIC_MODEL` | `claude-haiku-4-5` | Model used for rewrite/generate/hallucination-check |
+| `LLM_PROVIDER` | `anthropic` | `anthropic`, `gemini`, or `groq` — pick whichever provider you have credits/quota for |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | — / `claude-haiku-4-5` | Used when `LLM_PROVIDER=anthropic` |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | — / `gemini-2.0-flash` | Used when `LLM_PROVIDER=gemini` (free tier via Google AI Studio) |
+| `GROQ_API_KEY` / `GROQ_MODEL` | — / `llama-3.1-8b-instant` | Used when `LLM_PROVIDER=groq` (free tier via console.groq.com) |
 | `EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | HuggingFace embedding model |
 | `VECTOR_DB` | `chroma` | `chroma` or `faiss` |
 | `VECTOR_DB_PATH` | `./data/vectorstore` | Persistence directory |
@@ -246,7 +249,7 @@ The intended production topology is a single EC2 instance running Docker + Docke
 
 Two GitHub Actions workflows:
 
-- **`ci.yml`** (every push/PR to `main`): installs dependencies, runs `ruff check`, runs the full `pytest` suite (42 tests, no real API calls), and does a Docker build check.
+- **`ci.yml`** (every push/PR to `main`): installs dependencies, runs `ruff check`, runs the full `pytest` suite (45 tests, no real API calls), and does a Docker build check.
 - **`cd.yml`** (every push to `main`): builds and pushes the image to `ghcr.io/<owner>/rag-chatbot:<sha>` and `:latest`, then attempts an SSH deploy to EC2 via `deploy/ec2/deploy.sh`. The deploy step checks for `EC2_HOST` / `EC2_SSH_KEY` repo secrets first and skips with a clear log message if they aren't set yet — so CD stays green even before AWS access is wired up.
 
 To enable real EC2 deploys, add these repository secrets (Settings → Secrets and variables → Actions):

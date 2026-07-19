@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Enterprise RAG Chatbot</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #0f1115;
+    color: #e8e8e8;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .sub { color: #9aa0a6; margin-bottom: 24px; font-size: 0.9rem; }
+  section {
+    background: #171a21;
+    border: 1px solid #2a2f3a;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 18px;
+  }
+  section h2 { margin: 0 0 12px; font-size: 1rem; color: #8ab4f8; }
+  label { display: block; font-size: 0.8rem; color: #9aa0a6; margin: 8px 0 4px; }
+  input[type=email], input[type=password], input[type=text] {
+    width: 100%; box-sizing: border-box; padding: 8px 10px;
+    border-radius: 6px; border: 1px solid #3a3f4b; background: #0f1115; color: #e8e8e8;
+  }
+  button {
+    margin-top: 12px; padding: 8px 16px; border-radius: 6px; border: none;
+    background: #8ab4f8; color: #0f1115; font-weight: 600; cursor: pointer;
+  }
+  button:hover { background: #a9c8ff; }
+  button:disabled { background: #444; color: #999; cursor: not-allowed; }
+  .status { margin-top: 8px; font-size: 0.85rem; }
+  .ok { color: #81c995; }
+  .err { color: #f28b82; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 0.75rem; background: #2a2f3a; margin-left: 8px;
+  }
+  #docList { list-style: none; padding: 0; margin: 8px 0 0; font-size: 0.85rem; }
+  #docList li { padding: 4px 0; border-bottom: 1px solid #2a2f3a; display: flex; justify-content: space-between; }
+  #docList button.del { background: #3a1f22; color: #f28b82; padding: 2px 8px; font-size: 0.75rem; margin: 0; }
+  #chatBox {
+    height: 340px; overflow-y: auto; border: 1px solid #2a2f3a; border-radius: 8px;
+    padding: 12px; background: #0f1115; margin-bottom: 10px;
+  }
+  .msg { margin-bottom: 12px; }
+  .msg .role { font-size: 0.75rem; color: #9aa0a6; margin-bottom: 2px; }
+  .msg.user .bubble { background: #1b2a4a; }
+  .msg.assistant .bubble { background: #1e2430; }
+  .bubble { padding: 8px 12px; border-radius: 8px; display: inline-block; max-width: 90%; white-space: pre-wrap; }
+  .sources { font-size: 0.72rem; color: #8ab4f8; margin-top: 4px; }
+  .chatRow { display: flex; gap: 8px; }
+  .chatRow input { flex: 1; }
+  .chatRow button { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<h1>🤖 Enterprise RAG Chatbot</h1>
+<div class="sub">FastAPI + LangGraph RAG pipeline · ChromaDB/FAISS · JWT auth · <a href="/docs" style="color:#8ab4f8">API docs</a></div>
+
+<section id="authSection">
+  <h2>1. Auth <span class="pill" id="authPill">not logged in</span></h2>
+  <label>Email</label>
+  <input type="email" id="email" value="demo@example.com" />
+  <label>Password</label>
+  <input type="password" id="password" value="supersecret1" />
+  <button id="registerBtn">Register</button>
+  <button id="loginBtn">Login</button>
+  <div class="status" id="authStatus"></div>
+</section>
+
+<section id="uploadSection">
+  <h2>2. Documents</h2>
+  <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" />
+  <button id="uploadBtn">Upload</button>
+  <button id="refreshDocsBtn">Refresh list</button>
+  <div class="status" id="uploadStatus"></div>
+  <ul id="docList"></ul>
+</section>
+
+<section id="chatSection">
+  <h2>3. Chat</h2>
+  <div id="chatBox"></div>
+  <div class="chatRow">
+    <input type="text" id="chatInput" placeholder="Ask a question about your uploaded documents..." />
+    <button id="sendBtn">Send</button>
+  </div>
+</section>
+
+<script>
+const API_BASE = "/api/v1";
+
+let token = null;
+let sessionId = null;
+
+const authStatus = document.getElementById("authStatus");
+const uploadStatus = document.getElementById("uploadStatus");
+const authPill = document.getElementById("authPill");
+const chatBox = document.getElementById("chatBox");
+const docList = document.getElementById("docList");
+
+function setStatus(el, msg, ok) {
+  el.textContent = msg;
+  el.className = "status " + (ok ? "ok" : "err");
+}
+
+async function api(path, options = {}) {
+  const headers = options.headers || {};
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API_BASE + path, { ...options, headers });
+  let body = null;
+  try { body = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    const detail = body && body.detail ? body.detail : res.statusText;
+    throw new Error(`${res.status}: ${detail}`);
+  }
+  return body;
+}
+
+document.getElementById("registerBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await api("/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    setStatus(authStatus, "Registered. Now click Login.", true);
+  } catch (e) {
+    setStatus(authStatus, "Register: " + e.message + " (fine if account already exists)", false);
+  }
+};
+
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    const body = await api("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    token = body.access_token;
+    authPill.textContent = "logged in as " + email;
+    setStatus(authStatus, "Login successful.", true);
+    refreshDocs();
+  } catch (e) {
+    setStatus(authStatus, "Login failed: " + e.message, false);
+  }
+};
+
+async function refreshDocs() {
+  if (!token) return;
+  try {
+    const docs = await api("/documents");
+    docList.innerHTML = "";
+    docs.forEach((d) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${d.filename} — ${d.status} (${d.chunk_count} chunks)</span>`;
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "Delete";
+      delBtn.className = "del";
+      delBtn.onclick = async () => {
+        await api(`/documents/${d.id}`, { method: "DELETE" });
+        refreshDocs();
+      };
+      li.appendChild(delBtn);
+      docList.appendChild(li);
+    });
+  } catch (e) {
+    setStatus(uploadStatus, "Could not list documents: " + e.message, false);
+  }
+}
+document.getElementById("refreshDocsBtn").onclick = refreshDocs;
+
+document.getElementById("uploadBtn").onclick = async () => {
+  if (!token) { setStatus(uploadStatus, "Login first.", false); return; }
+  const fileInput = document.getElementById("fileInput");
+  if (!fileInput.files.length) { setStatus(uploadStatus, "Choose a file first.", false); return; }
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  try {
+    const doc = await api("/upload", { method: "POST", body: formData });
+    setStatus(uploadStatus, `Uploaded "${doc.filename}" — ${doc.status}, ${doc.chunk_count} chunks.`, true);
+    refreshDocs();
+  } catch (e) {
+    setStatus(uploadStatus, "Upload failed: " + e.message, false);
+  }
+};
+
+function appendMessage(role, content, sources) {
+  const div = document.createElement("div");
+  div.className = "msg " + role;
+  let sourcesHtml = "";
+  if (sources && sources.length) {
+    sourcesHtml = `<div class="sources">Sources: ${sources.join(", ")}</div>`;
+  }
+  div.innerHTML = `<div class="role">${role}</div><div class="bubble"></div>${sourcesHtml}`;
+  div.querySelector(".bubble").textContent = content;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function sendChat() {
+  if (!token) { alert("Login first."); return; }
+  const input = document.getElementById("chatInput");
+  const message = input.value.trim();
+  if (!message) return;
+  appendMessage("user", message);
+  input.value = "";
+  try {
+    const body = await api("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, session_id: sessionId }),
+    });
+    sessionId = body.session_id;
+    appendMessage("assistant", body.answer, body.sources);
+  } catch (e) {
+    appendMessage("assistant", "Error: " + e.message, []);
+  }
+}
+document.getElementById("sendBtn").onclick = sendChat;
+document.getElementById("chatInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChat();
+});
+</script>
+</body>
+</html>

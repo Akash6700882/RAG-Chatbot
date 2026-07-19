@@ -9,10 +9,16 @@ def test_health_check(client: TestClient):
     assert response.json() == {"status": "ok"}
 
 
-def test_root_redirects_to_docs(client: TestClient):
+def test_root_redirects_to_ui(client: TestClient):
     response = client.get("/", follow_redirects=False)
     assert response.status_code in (302, 307)
-    assert response.headers["location"] == "/docs"
+    assert response.headers["location"] == "/ui"
+
+
+def test_ui_frontend_is_served(client: TestClient):
+    response = client.get("/ui")
+    assert response.status_code == 200
+    assert "Enterprise RAG Chatbot" in response.text
 
 
 def test_openapi_schema_lists_expected_routes(client: TestClient):
