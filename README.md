@@ -4,6 +4,8 @@ A production-grade, enterprise-style **Retrieval-Augmented Generation (RAG)** ch
 
 > Built as a portfolio project demonstrating an end-to-end LLM application: ingestion pipeline design, agentic orchestration with LangGraph, prompt engineering to reduce hallucinations, and production deployment practices (Docker, CI/CD, reverse proxy, HTTPS).
 
+> **Full engineering documentation** — a 20-file deep dive covering architecture, every technology choice, a real debugging journal (9 genuine production incidents), interview prep, and diagrams — lives in [`docs/`](docs/README.md).
+
 ---
 
 ## Features
